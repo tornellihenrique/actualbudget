@@ -124,14 +124,14 @@ fast-forward of `personal` — never commit to it, never merge into it.
 The service's settings, for reference — if a deploy behaves unexpectedly, check
 these first, they're the whole contract between the repo and Railway:
 
-| Setting                   | Value                           | Notes                                                           |
-| ------------------------- | ------------------------------- | --------------------------------------------------------------- |
-| Source branch             | `deploy`                        | Pushing to `deploy` is what triggers a build.                   |
-| `RAILWAY_DOCKERFILE_PATH` | `sync-server.Dockerfile`        | Without it Railway guesses the build and gets it wrong.         |
-| `ACTUAL_DATA_DIR`         | `/data`                         | Where the server keeps budget files and its SQLite DBs.         |
-| Volume mount path         | `/data`                         | Must match `ACTUAL_DATA_DIR` or data is lost on redeploy.       |
-| `PORT`                    | injected by Railway             | Don't set it. The server reads it; hardcoding breaks routing.   |
-| `ACTUAL_BUILD_METADATA`   | `${{ RAILWAY_GIT_COMMIT_SHA }}` | Optional. Stamps the commit into the version shown in Settings. |
+| Setting                   | Value                    | Notes                                                                       |
+| ------------------------- | ------------------------ | --------------------------------------------------------------------------- |
+| Source branch             | `deploy`                 | Pushing to `deploy` is what triggers a build.                               |
+| `RAILWAY_DOCKERFILE_PATH` | `sync-server.Dockerfile` | Without it Railway guesses the build and gets it wrong.                     |
+| `ACTUAL_DATA_DIR`         | `/data`                  | Where the server keeps budget files and its SQLite DBs.                     |
+| Volume mount path         | `/data`                  | Must match `ACTUAL_DATA_DIR` or data is lost on redeploy.                   |
+| `PORT`                    | injected by Railway      | Don't set it. The server reads it; hardcoding breaks routing.               |
+| `ACTUAL_BUILD_METADATA`   | _unset_                  | Optional override. Leave unset — the commit SHA is picked up automatically. |
 
 The volume is the only stateful part of the deploy. Everything else is rebuilt
 from the image, so a bad deploy is recoverable by redeploying — a wrong mount path
@@ -140,18 +140,30 @@ is not.
 ### Identifying which commit is deployed
 
 `package.json` only changes at an upstream release, so a fork tracking `master`
-reports the same version for every build in between. Setting
-`ACTUAL_BUILD_METADATA` appends it as semver build metadata, and Settings then
-reads `v26.7.0+<sha>` for both client and server.
+reports the same version for every build in between. The deploy appends the
+commit as semver build metadata, so Settings reads `v26.7.0+<sha>` for both
+client and server. No configuration is needed — `sync-server.Dockerfile` reads
+`RAILWAY_GIT_COMMIT_SHA` itself.
 
-The value is shown verbatim — `RAILWAY_GIT_COMMIT_SHA` is the full 40-character
-SHA, so set it to something shorter by hand if that bothers you. Leaving the
-variable unset restores stock upstream behaviour exactly.
+**Do not set `ACTUAL_BUILD_METADATA` to `${{ RAILWAY_GIT_COMMIT_SHA }}`.** It
+resolves to an empty string, which is the whole reason the Dockerfile reads the
+SHA directly. Railway's git variables are _deploy-scoped_: injected into builds
+and deployments, but never part of the service's variable set that `${{ }}`
+interpolates against. The giveaway is that `list-variables` for the service also
+omits `RAILWAY_DEPLOYMENT_ID` and `RAILWAY_REPLICA_ID`, which unquestionably
+exist inside every running container.
 
-Railway must expose it at **build** time, not just runtime: the client bakes it
-into the bundle during the build, while the server reads it per request. If the
-variable only reaches the runtime container, Settings shows a stamped server
-version next to an unstamped client one — that asymmetry is the symptom.
+Set `ACTUAL_BUILD_METADATA` only to override the SHA with something else; it
+takes precedence when non-empty. The value is shown verbatim, and the SHA is the
+full 40 characters.
+
+Two consequences worth knowing. Railway only provides git variables when the
+deploy _originated from a git trigger_, so a redeploy triggered by a variable
+change can come up unstamped — push a commit to restamp it. And if the SHA
+reaches the runtime container but not the build, Settings shows a stamped server
+version beside an unstamped client one; the client bakes its value in at build
+time, while the server resolves it at start. The build log prints
+`Client build metadata: …`, which says which of the two happened.
 
 Locally there is no Dockerfile to map one name to the other, so set both. The
 client name carries Vite's `REACT_APP_` prefix, without which Vite ignores it:
