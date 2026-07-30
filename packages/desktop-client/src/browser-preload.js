@@ -15,11 +15,17 @@ const backendWorkerUrl = new URL('./browser-server.js', import.meta.url);
 // everything else.
 
 const IS_DEV = import.meta.env.DEV;
+// Builds that don't correspond to a released version can stamp an identifier
+// (a commit SHA, a build number) into the reported version as semver build
+// metadata. Unset in a normal build, where the version is the released one.
+const BUILD_METADATA = import.meta.env.REACT_APP_BUILD_METADATA;
 const ACTUAL_VERSION = Platform.isPlaywright
   ? '99.9.9'
   : import.meta.env.REACT_APP_REVIEW_ID
     ? '.preview'
-    : packageJson.version;
+    : BUILD_METADATA
+      ? `${packageJson.version}+${BUILD_METADATA}`
+      : packageJson.version;
 
 // The OIDC callback (/openid-cb) is reached via a full-page navigation back
 // from the OpenID provider. Routing it through the SharedWorker coordinator is
