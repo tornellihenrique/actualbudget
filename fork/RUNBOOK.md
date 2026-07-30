@@ -149,12 +149,23 @@ SHA, so set it to something shorter by hand if that bothers you. Leaving the
 variable unset restores stock upstream behaviour exactly.
 
 Railway must expose it at **build** time, not just runtime: the client bakes it
-into the bundle during the build, while the server reads it per request. Locally:
+into the bundle during the build, while the server reads it per request. If the
+variable only reaches the runtime container, Settings shows a stamped server
+version next to an unstamped client one — that asymmetry is the symptom.
+
+Locally there is no Dockerfile to map one name to the other, so set both. The
+client name carries Vite's `REACT_APP_` prefix, without which Vite ignores it:
 
 ```bash
-REACT_APP_BUILD_METADATA=$(git rev-parse --short HEAD) yarn build:browser
-ACTUAL_BUILD_METADATA=$(git rev-parse --short HEAD) yarn start:server-dev
+ACTUAL_BUILD_METADATA=$(git rev-parse --short HEAD) \
+REACT_APP_BUILD_METADATA=$(git rev-parse --short HEAD) \
+  yarn start:server-dev
 ```
+
+Vite reads the environment once at startup, so the dev server has to be
+restarted — exporting the variable in an already-running shell does nothing.
+"Server version" only renders when the client is connected to a server; it shows
+`N/A` otherwise.
 
 ### Pushing a deploy
 
