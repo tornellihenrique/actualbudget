@@ -98,6 +98,25 @@ git branch -D personal-backup-<old-tag>
 Railway builds `deploy` from `sync-server.Dockerfile`. `deploy` must always be a
 fast-forward of `personal` — never commit to it, never merge into it.
 
+### Railway configuration
+
+The service's settings, for reference — if a deploy behaves unexpectedly, check
+these first, they're the whole contract between the repo and Railway:
+
+| Setting                   | Value                    | Notes                                                         |
+| ------------------------- | ------------------------ | ------------------------------------------------------------- |
+| Source branch             | `deploy`                 | Pushing to `deploy` is what triggers a build.                 |
+| `RAILWAY_DOCKERFILE_PATH` | `sync-server.Dockerfile` | Without it Railway guesses the build and gets it wrong.       |
+| `ACTUAL_DATA_DIR`         | `/data`                  | Where the server keeps budget files and its SQLite DBs.       |
+| Volume mount path         | `/data`                  | Must match `ACTUAL_DATA_DIR` or data is lost on redeploy.     |
+| `PORT`                    | injected by Railway      | Don't set it. The server reads it; hardcoding breaks routing. |
+
+The volume is the only stateful part of the deploy. Everything else is rebuilt
+from the image, so a bad deploy is recoverable by redeploying — a wrong mount path
+is not.
+
+### Pushing a deploy
+
 ```bash
 # 1. personal is green: typecheck, lint, tests, and a local smoke test all pass.
 git checkout personal
@@ -155,6 +174,18 @@ force-push `personal` or `master`.
 
 Useful before adopting a fix as a patch, or to check whether an upstream PR
 actually solves the problem a local patch works around.
+
+### Mind the version gap
+
+`personal` sits on tag `v26.7.0`, while `master` tracks upstream and runs roughly a
+month ahead of it. Upstream PRs are written against `master`, so they carry that
+month of drift with them: a cherry-pick onto `personal` usually **won't** apply
+cleanly, and when it does apply it may depend on `master`-only code that isn't in
+`v26.7.0`.
+
+Expect to either re-derive the change against `v26.7.0` or simply wait for the
+next release and pick it up in the rebase. A clean cherry-pick is the exception,
+not the plan.
 
 ### Fetch the PR
 

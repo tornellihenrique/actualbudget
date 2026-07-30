@@ -10,10 +10,10 @@ specific to this fork.
 
 ## Branches
 
-| Branch     | Role                                                                       |
-| ---------- | -------------------------------------------------------------------------- |
+| Branch     | Role                                                                              |
+| ---------- | --------------------------------------------------------------------------------- |
 | `master`   | Mirrors upstream. **Never commit to it.** Only ever fast-forwarded from upstream. |
-| `personal` | Branched from an upstream tag; holds all local patches. Work happens here.  |
+| `personal` | Branched from an upstream tag; holds all local patches. Work happens here.        |
 | `deploy`   | Fast-forwarded from `personal`. Railway builds this via `sync-server.Dockerfile`. |
 
 Never commit directly to `master` or `deploy`.
@@ -42,6 +42,27 @@ ongoing rebase cost. Before writing one:
 6. **Record it.** Every patch gets a row in `fork/PATCHES.md`, including the
    condition under which it gets dropped. A patch with no drop condition is a
    patch that will be carried forever by accident.
+
+## Coding preferences
+
+These apply to all code written in this checkout, patch or not.
+
+- **SOLID.** Single responsibility, dependencies pointing at abstractions, no
+  god-objects or grab-bag modules.
+- **Match the surrounding code.** Style, naming, file layout, and idiom come from
+  the code you're editing, not from your own defaults.
+- **Follow upstream Actual conventions.** Even in fork-only code. If upstream has
+  an established way to do something, use it — divergence in style makes rebases
+  and upstream PRs harder than they need to be.
+- **Design for extension.** New code should have the seams to grow along the axes
+  it will plausibly grow along, without being speculatively general.
+- **Minimal comments.** Comment only where the code genuinely can't carry the
+  meaning: a non-obvious invariant, a workaround and the reason for it, an
+  upstream quirk. No restating what the line does.
+- **Never write comments addressed to the reader-as-requester.** No "as you
+  asked", no "per your request", no references to prompts, tasks, or this
+  conversation. Comments describe the code, permanently, for whoever reads it
+  next.
 
 ## Before committing
 
