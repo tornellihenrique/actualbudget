@@ -108,11 +108,20 @@ app.get('/info', (_req, res) => {
   const dirname = resolve(fileURLToPath(import.meta.url), '../');
   const packageJson = findPackageJson(dirname);
 
+  // Builds that don't correspond to a released version can stamp an identifier
+  // (a commit SHA, a build number) into the reported version as semver build
+  // metadata. Unset in a normal build, where the version is the released one.
+  const buildMetadata = process.env.ACTUAL_BUILD_METADATA;
+  const version =
+    packageJson?.version && buildMetadata
+      ? `${packageJson.version}+${buildMetadata}`
+      : packageJson?.version;
+
   res.status(200).json({
     build: {
       name: packageJson?.name,
       description: packageJson?.description,
-      version: packageJson?.version,
+      version,
     },
   });
 });
