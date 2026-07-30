@@ -41,8 +41,15 @@ RUN git -c init.defaultBranch=master init -q \
 
 # Stamps the build identity (commit SHA, build number) into the version the
 # client reports. Declared here so changing it doesn't invalidate the dep layers.
+# Railway injects RAILWAY_GIT_COMMIT_SHA into builds and deployments, but it is
+# deploy-scoped: it never appears in the service's variable set, so referencing
+# it as ${{ RAILWAY_GIT_COMMIT_SHA }} yields an empty string. It has to be read
+# directly, as below. Empty when the deploy didn't originate from a git trigger.
 ARG ACTUAL_BUILD_METADATA
-ENV REACT_APP_BUILD_METADATA=$ACTUAL_BUILD_METADATA
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV REACT_APP_BUILD_METADATA=${ACTUAL_BUILD_METADATA:-$RAILWAY_GIT_COMMIT_SHA}
+
+RUN echo "Client build metadata: ${REACT_APP_BUILD_METADATA:-(none)}"
 
 RUN yarn build:server
 
@@ -75,7 +82,8 @@ ENV NODE_ENV=production
 # Same identity the client was built with, read at runtime by /info. A runtime
 # environment variable of the same name overrides this.
 ARG ACTUAL_BUILD_METADATA
-ENV ACTUAL_BUILD_METADATA=$ACTUAL_BUILD_METADATA
+ARG RAILWAY_GIT_COMMIT_SHA
+ENV ACTUAL_BUILD_METADATA=${ACTUAL_BUILD_METADATA:-$RAILWAY_GIT_COMMIT_SHA}
 
 # Pull in only the necessary artifacts (built node_modules, server files, etc.)
 COPY --from=builder /app/node_modules /app/node_modules
@@ -84,4 +92,6 @@ COPY --from=builder /app/packages/sync-server/build ./build
 
 ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 EXPOSE 5006
-CMD ["node", "build/app.js"]
+# Resolved at start rather than baked in, so the commit is picked up even when
+# the platform only exposes it to the running container and not to the build.
+CMD ["sh", "-c", "export ACTUAL_BUILD_METADATA=\"${ACTUAL_BUILD_METADATA:-$RAILWAY_GIT_COMMIT_SHA}\"; exec node build/app.js"]
