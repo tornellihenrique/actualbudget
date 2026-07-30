@@ -6,15 +6,21 @@ patches, and `fork/PATCHES.md` for what's currently carried.
 Branch roles, for reference:
 
 - `master` — mirrors upstream, never committed to.
-- `personal` — patches on top of an upstream tag. All work happens here.
+- `personal` — patches on top of upstream `master`. All work happens here.
 - `deploy` — fast-forwarded from `personal`; Railway builds it via `sync-server.Dockerfile`.
 
 ---
 
-## 1. Rebasing onto a new upstream tag
+## 1. Rebasing onto new upstream code
 
-Do this per upstream release, not continuously — tags are tested, `master` between
-tags isn't.
+Since 2026-07-30 this fork tracks upstream `master` rather than release tags — a
+deliberate call that master is stable enough for this instance. The tradeoff is
+real and worth restating: tags are release-tested, arbitrary master commits are
+not. Prefer to sync at a moment when upstream CI is green, and always smoke-test
+before deploying (§3).
+
+The procedure below works either way. Substitute a tag for `upstream/master`
+anywhere it appears if you want to go back to release-based syncing.
 
 ### 1.1 Update the upstream mirror
 
@@ -28,7 +34,7 @@ git merge --ff-only upstream/master
 `--ff-only` is deliberate: if it refuses, something was committed to `master`
 that shouldn't have been. Fix that before going further — don't merge.
 
-Pick the target tag (e.g. `v26.8.0`):
+The new base is `upstream/master`. If you're targeting a release tag instead:
 
 ```bash
 git tag --list 'v26.*' --sort=-v:refname | head
@@ -37,8 +43,10 @@ git tag --list 'v26.*' --sort=-v:refname | head
 ### 1.2 Review what you're carrying before you replay it
 
 ```bash
-git log --oneline <old-tag>..personal
+git log --oneline <old-base>..personal
 ```
+
+`<old-base>` is the `Base:` commit recorded at the top of `fork/PATCHES.md`.
 
 Cross-check each commit against `fork/PATCHES.md` and, for anything with an
 upstream PR, check whether it merged. **Drop patches that upstream fixed** — that
@@ -47,12 +55,23 @@ commit from the todo list in the next step.
 
 ### 1.3 Replay
 
+Tag the current state of every branch you're about to rewrite — this is the
+escape hatch, and it costs nothing:
+
 ```bash
-git checkout personal
-git checkout -b personal-backup-<old-tag>   # cheap escape hatch; delete once happy
-git checkout personal
-git rebase --onto <new-tag> <old-tag> personal
+git tag -a pre-sync-<date>/personal personal -m "state before syncing onto <new-base>"
+git tag -a pre-sync-<date>/deploy   deploy   -m "last known-good deployed commit"
 ```
+
+Then replay:
+
+```bash
+git rebase --onto upstream/master <old-base> personal
+```
+
+Tags beat backup branches here: they don't clutter `git branch`, they survive
+force-pushes, and pushing them puts the escape hatch on GitHub too. Delete them
+once the deploy has been healthy for a while.
 
 On a conflict: resolve, `git add`, `git rebase --continue`. To abandon a patch
 mid-rebase (upstream superseded it), `git rebase --skip`. To bail out entirely,
@@ -81,14 +100,16 @@ Smoke-test locally before deploying — see §3.
 
 ### 1.5 Record
 
-Update `fork/PATCHES.md`: new base tag, refreshed commit SHAs (the rebase
+Update `fork/PATCHES.md`: new base commit, refreshed commit SHAs (the rebase
 rewrote them), and move anything dropped into the Dropped table with the reason.
-Commit that as its own change.
+Also re-check anything in `CLAUDE.md` or this runbook that names the old base —
+a stale base reference is the easiest way to mislead the next rebase.
 
-Delete the backup branch once the deploy is healthy:
+Delete the escape-hatch tags once the deploy has been healthy for a while:
 
 ```bash
-git branch -D personal-backup-<old-tag>
+git tag -d pre-sync-<date>/personal pre-sync-<date>/deploy
+git push origin --delete pre-sync-<date>/personal pre-sync-<date>/deploy
 ```
 
 ---
@@ -177,15 +198,11 @@ actually solves the problem a local patch works around.
 
 ### Mind the version gap
 
-`personal` sits on tag `v26.7.0`, while `master` tracks upstream and runs roughly a
-month ahead of it. Upstream PRs are written against `master`, so they carry that
-month of drift with them: a cherry-pick onto `personal` usually **won't** apply
-cleanly, and when it does apply it may depend on `master`-only code that isn't in
-`v26.7.0`.
-
-Expect to either re-derive the change against `v26.7.0` or simply wait for the
-next release and pick it up in the rebase. A clean cherry-pick is the exception,
-not the plan.
+`personal` now sits directly on upstream `master`, so PRs written against `master`
+generally cherry-pick cleanly — that was the main practical win of the 2026-07-30
+sync. The gap reopens as `master` moves on, so the further `personal` drifts from
+the `Base:` commit in `fork/PATCHES.md`, the more a failed cherry-pick just means
+"resync first, then try again."
 
 ### Fetch the PR
 

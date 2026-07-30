@@ -13,7 +13,7 @@ specific to this fork.
 | Branch     | Role                                                                              |
 | ---------- | --------------------------------------------------------------------------------- |
 | `master`   | Mirrors upstream. **Never commit to it.** Only ever fast-forwarded from upstream. |
-| `personal` | Branched from an upstream tag; holds all local patches. Work happens here.        |
+| `personal` | Based on upstream `master`; holds all local patches. Work happens here.           |
 | `deploy`   | Fast-forwarded from `personal`. Railway builds this via `sync-server.Dockerfile`. |
 
 Never commit directly to `master` or `deploy`.
@@ -32,8 +32,8 @@ ongoing rebase cost. Before writing one:
 3. **Single-purpose.** One commit per patch, one concern per commit. Two
    unrelated fixes are two commits, never one, so that either can be dropped
    independently when upstream fixes it.
-4. **Rebasable onto upstream tags.** Assume the patch will be replayed onto
-   every future release tag. Avoid depending on incidental upstream details, and
+4. **Rebasable onto upstream.** Assume the patch will be replayed onto every
+   future sync of `master`. Avoid depending on incidental upstream details, and
    prefer additive changes over rewrites of upstream code.
 5. **PR-able upstream where possible.** If a patch is a genuine bug fix or a
    generally useful feature, send it upstream — an accepted PR is a patch that
@@ -74,7 +74,7 @@ These apply to all code written in this checkout, patch or not.
 ## Fork documentation
 
 - `fork/PATCHES.md` — inventory of every patch on `personal`.
-- `fork/RUNBOOK.md` — rebasing onto a new upstream tag, deploying, testing upstream PRs.
+- `fork/RUNBOOK.md` — syncing onto new upstream code, deploying, testing upstream PRs.
 - `fork/NOTES.md` — context about this instance.
 
 Keep these current as part of the change, not afterwards: a patch that lands
