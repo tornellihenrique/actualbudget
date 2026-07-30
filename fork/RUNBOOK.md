@@ -124,17 +124,37 @@ fast-forward of `personal` — never commit to it, never merge into it.
 The service's settings, for reference — if a deploy behaves unexpectedly, check
 these first, they're the whole contract between the repo and Railway:
 
-| Setting                   | Value                    | Notes                                                         |
-| ------------------------- | ------------------------ | ------------------------------------------------------------- |
-| Source branch             | `deploy`                 | Pushing to `deploy` is what triggers a build.                 |
-| `RAILWAY_DOCKERFILE_PATH` | `sync-server.Dockerfile` | Without it Railway guesses the build and gets it wrong.       |
-| `ACTUAL_DATA_DIR`         | `/data`                  | Where the server keeps budget files and its SQLite DBs.       |
-| Volume mount path         | `/data`                  | Must match `ACTUAL_DATA_DIR` or data is lost on redeploy.     |
-| `PORT`                    | injected by Railway      | Don't set it. The server reads it; hardcoding breaks routing. |
+| Setting                   | Value                           | Notes                                                           |
+| ------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| Source branch             | `deploy`                        | Pushing to `deploy` is what triggers a build.                   |
+| `RAILWAY_DOCKERFILE_PATH` | `sync-server.Dockerfile`        | Without it Railway guesses the build and gets it wrong.         |
+| `ACTUAL_DATA_DIR`         | `/data`                         | Where the server keeps budget files and its SQLite DBs.         |
+| Volume mount path         | `/data`                         | Must match `ACTUAL_DATA_DIR` or data is lost on redeploy.       |
+| `PORT`                    | injected by Railway             | Don't set it. The server reads it; hardcoding breaks routing.   |
+| `ACTUAL_BUILD_METADATA`   | `${{ RAILWAY_GIT_COMMIT_SHA }}` | Optional. Stamps the commit into the version shown in Settings. |
 
 The volume is the only stateful part of the deploy. Everything else is rebuilt
 from the image, so a bad deploy is recoverable by redeploying — a wrong mount path
 is not.
+
+### Identifying which commit is deployed
+
+`package.json` only changes at an upstream release, so a fork tracking `master`
+reports the same version for every build in between. Setting
+`ACTUAL_BUILD_METADATA` appends it as semver build metadata, and Settings then
+reads `v26.7.0+<sha>` for both client and server.
+
+The value is shown verbatim — `RAILWAY_GIT_COMMIT_SHA` is the full 40-character
+SHA, so set it to something shorter by hand if that bothers you. Leaving the
+variable unset restores stock upstream behaviour exactly.
+
+Railway must expose it at **build** time, not just runtime: the client bakes it
+into the bundle during the build, while the server reads it per request. Locally:
+
+```bash
+REACT_APP_BUILD_METADATA=$(git rev-parse --short HEAD) yarn build:browser
+ACTUAL_BUILD_METADATA=$(git rev-parse --short HEAD) yarn start:server-dev
+```
 
 ### Pushing a deploy
 
