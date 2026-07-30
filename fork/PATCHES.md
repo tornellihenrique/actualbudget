@@ -2,15 +2,15 @@
 
 Every commit on `personal` that did not come from upstream gets exactly one row
 here. If a patch isn't listed, it will be carried forever by accident — the
-inventory is the only place the *reason* for a patch survives a rebase.
+inventory is the only place the _reason_ for a patch survives a rebase.
 
 Base tag: `v26.7.0` (update on every rebase — see `fork/RUNBOOK.md`).
 
 ## Active patches
 
-| Commit | What | Why | Upstream PR / issue | Drop when |
-| ------ | ---- | --- | ------------------- | --------- |
-|        |      |     |                     |           |
+| Commit      | What                                                                                                      | Why                                                                                                                                                                                                                                                                         | Upstream PR / issue                                                                                                          | Drop when                                                                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `83b917c0c` | `sync-server.Dockerfile`: adds `COPY packages/vite-plugin-peggy/package.json` to the deps stage (1 line). | Upstream bug. The deps stage copies workspace manifests one by one and omits `vite-plugin-peggy`, which `packages/api` and `packages/loot-core` depend on via `workspace:*`. Yarn fails resolution before install even starts, so the Railway build dies in the deps stage. | none — not yet sent upstream. Genuine upstream bug, PR-able as-is; still missing on `master` as of 2026-07-28 (`79f7860cc`). | Upstream adds the `vite-plugin-peggy` manifest COPY (or stops enumerating manifests individually) in `sync-server.Dockerfile`, and we rebase onto a tag containing it. |
 
 ## Dropped patches
 
