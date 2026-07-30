@@ -39,6 +39,11 @@ RUN git -c init.defaultBranch=master init -q \
     && git -c user.email=build@docker -c user.name=docker-build add -A \
     && git -c user.email=build@docker -c user.name=docker-build commit -qm build
 
+# Stamps the build identity (commit SHA, build number) into the version the
+# client reports. Declared here so changing it doesn't invalidate the dep layers.
+ARG ACTUAL_BUILD_METADATA
+ENV REACT_APP_BUILD_METADATA=$ACTUAL_BUILD_METADATA
+
 RUN yarn build:server
 
 # Focus the workspaces in production mode (including @actual-app/web you just built)
@@ -66,6 +71,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Same identity the client was built with, read at runtime by /info. A runtime
+# environment variable of the same name overrides this.
+ARG ACTUAL_BUILD_METADATA
+ENV ACTUAL_BUILD_METADATA=$ACTUAL_BUILD_METADATA
 
 # Pull in only the necessary artifacts (built node_modules, server files, etc.)
 COPY --from=builder /app/node_modules /app/node_modules
