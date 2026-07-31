@@ -2,8 +2,15 @@ import { useMemo } from 'react';
 
 import type { SyncedPrefs } from '@actual-app/core/types/prefs';
 
-import { parseTransactionTableColumns } from '#components/transactions/table/columns';
-import type { TransactionTableColumn } from '#components/transactions/table/columns';
+import {
+  getMinTransactionTableColumnWidth,
+  parseTransactionTableColumns,
+  resolveTransactionTableColumnWidths,
+} from '#components/transactions/table/columns';
+import type {
+  TransactionTableColumn,
+  TransactionTableColumnId,
+} from '#components/transactions/table/columns';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { saveSyncedPrefs } from '#prefs/prefsSlice';
 import { useDispatch, useSelector } from '#redux';
@@ -98,12 +105,64 @@ export function useTransactionTableColumns(accountId: string | undefined) {
     }
   };
 
+  // Memoized for the same reason as `columnOrder`: this object crosses the
+  // `memo()` boundary of every transaction row.
+  const columnWidths = useMemo(
+    () => resolveTransactionTableColumnWidths(transactionColumns),
+    [transactionColumns],
+  );
+
+  /**
+   * Persist the widths produced by a header drag. Written to the same
+   * per-view pref as the rest of the column config, so a resize follows
+   * whichever layout the view is already using.
+   */
+  const saveColumnWidths = (
+    widths: Partial<Record<TransactionTableColumnId, number>>,
+  ) => {
+    const next = transactionColumns.map(column => {
+      const width = widths[column.id];
+      if (width == null) {
+        return column;
+      }
+      return {
+        ...column,
+        width: Math.max(
+          getMinTransactionTableColumnWidth(column.id),
+          Math.round(width),
+        ),
+      };
+    });
+    setViewColumnsConfig(JSON.stringify(next));
+  };
+
+  /** Drop every dragged width, returning the whole table to default sizing. */
+  const resetAllColumnWidths = () => {
+    setViewColumnsConfig(
+      JSON.stringify(
+        transactionColumns.map(({ id, hidden }) => ({ id, hidden })),
+      ),
+    );
+  };
+
+  /** Drop a dragged width so the column returns to its default sizing. */
+  const resetColumnWidth = (id: TransactionTableColumnId) => {
+    const next = transactionColumns.map(column =>
+      column.id === id ? { id: column.id, hidden: column.hidden } : column,
+    );
+    setViewColumnsConfig(JSON.stringify(next));
+  };
+
   return {
     transactionColumns,
     columnOrder,
+    columnWidths,
     showBalances,
     showCleared,
     showGroup,
     saveColumns,
+    saveColumnWidths,
+    resetColumnWidth,
+    resetAllColumnWidths,
   };
 }

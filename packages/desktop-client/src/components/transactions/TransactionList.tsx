@@ -115,6 +115,12 @@ type TransactionListProps = Pick<
   | 'showReconciled'
   | 'showSelection'
   | 'columnOrder'
+  | 'columnWidths'
+  | 'onSaveColumnWidths'
+  | 'onResetColumnWidth'
+  | 'onResetAllColumnWidths'
+  | 'onHideColumn'
+  | 'onManageColumns'
   | 'sortField'
   | 'transactions'
 > & {
@@ -151,6 +157,12 @@ export function TransactionList({
   showGroup,
   showAccount,
   columnOrder,
+  columnWidths,
+  onSaveColumnWidths,
+  onResetColumnWidth,
+  onResetAllColumnWidths,
+  onHideColumn,
+  onManageColumns,
   isAdding,
   isNew,
   isMatched,
@@ -507,6 +519,12 @@ export function TransactionList({
         showCategory
         showGroup={showGroup}
         columnOrder={columnOrder}
+        columnWidths={columnWidths}
+        onSaveColumnWidths={onSaveColumnWidths}
+        onResetColumnWidth={onResetColumnWidth}
+        onResetAllColumnWidths={onResetAllColumnWidths}
+        onHideColumn={onHideColumn}
+        onManageColumns={onManageColumns}
         currentAccountId={account && account.id}
         currentCategoryId={category && category.id}
         isAdding={isAdding}
