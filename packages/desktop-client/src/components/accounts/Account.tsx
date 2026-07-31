@@ -52,6 +52,7 @@ import type { SavedFilter } from '#components/filters/SavedFilterMenuButton';
 import type {
   TransactionTableColumn,
   TransactionTableColumnId,
+  TransactionTableColumnWidth,
 } from '#components/transactions/table/columns';
 import { TransactionList } from '#components/transactions/TransactionList';
 import { validateAccountName } from '#components/util/accountValidation';
@@ -231,6 +232,12 @@ type AccountInternalProps = {
   transactionColumns: TransactionTableColumn[];
   columnOrder: TransactionTableColumnId[];
   saveColumns: (columns: TransactionTableColumn[], applyToAll: boolean) => void;
+  columnWidths: Record<TransactionTableColumnId, TransactionTableColumnWidth>;
+  saveColumnWidths: (
+    widths: Partial<Record<TransactionTableColumnId, number>>,
+  ) => void;
+  resetColumnWidth: (id: TransactionTableColumnId) => void;
+  resetAllColumnWidths: () => void;
   modalShowing?: boolean;
   accounts: AccountEntity[];
   newTransactions: Array<TransactionEntity['id']>;
@@ -952,6 +959,15 @@ class AccountInternal extends PureComponent<
           },
         },
       }),
+    );
+  };
+
+  onHideColumn = (id: TransactionTableColumnId) => {
+    this.onSaveColumns(
+      this.props.transactionColumns.map(column =>
+        column.id === id ? { ...column, hidden: true } : column,
+      ),
+      false,
     );
   };
 
@@ -1921,6 +1937,12 @@ class AccountInternal extends PureComponent<
                   showGroup={this.props.showGroup}
                   showAccount={this.showAccountColumn()}
                   columnOrder={this.props.columnOrder}
+                  columnWidths={this.props.columnWidths}
+                  onSaveColumnWidths={this.props.saveColumnWidths}
+                  onResetColumnWidth={this.props.resetColumnWidth}
+                  onResetAllColumnWidths={this.props.resetAllColumnWidths}
+                  onHideColumn={this.onHideColumn}
+                  onManageColumns={this.onManageColumns}
                   allowReorder={
                     !!accountId &&
                     accountId !== 'offbudget' &&
@@ -2058,6 +2080,10 @@ export function Account() {
     showCleared,
     showGroup,
     saveColumns,
+    columnWidths,
+    saveColumnWidths,
+    resetColumnWidth,
+    resetAllColumnWidths,
   } = useTransactionTableColumns(params.id);
 
   const modalShowing = useSelector(state => state.modals.modalStack.length > 0);
@@ -2116,6 +2142,10 @@ export function Account() {
             transactionColumns={transactionColumns}
             columnOrder={columnOrder}
             saveColumns={saveColumns}
+            columnWidths={columnWidths}
+            saveColumnWidths={saveColumnWidths}
+            resetColumnWidth={resetColumnWidth}
+            resetAllColumnWidths={resetAllColumnWidths}
             payees={payees}
             modalShowing={modalShowing}
             accountsSyncing={accountsSyncing}

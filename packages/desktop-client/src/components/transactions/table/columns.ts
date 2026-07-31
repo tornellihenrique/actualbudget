@@ -20,7 +20,66 @@ export type TransactionTableColumnId =
 export type TransactionTableColumn = {
   id: TransactionTableColumnId;
   hidden: boolean;
+  // Pixel width set by dragging a header edge. Absent means the column uses
+  // its default sizing, which for most columns is a flex share of the row.
+  width?: number;
 };
+
+// Either a fixed pixel width or a share of the space left over once the fixed
+// columns are laid out — the two modes `Cell`/`Field` already support.
+export type TransactionTableColumnWidth = number | 'flex';
+
+export const DEFAULT_TRANSACTION_TABLE_COLUMN_WIDTHS: Record<
+  TransactionTableColumnId,
+  TransactionTableColumnWidth
+> = {
+  date: 110,
+  account: 'flex',
+  payee: 'flex',
+  notes: 'flex',
+  group: 'flex',
+  category: 'flex',
+  payment: 100,
+  deposit: 100,
+  balance: 103,
+  cleared: 38,
+};
+
+// Floor for a dragged column. Narrow enough to be useful, wide enough that a
+// column can't be collapsed to an unrecoverable sliver.
+const MIN_COLUMN_WIDTHS: Partial<Record<TransactionTableColumnId, number>> = {
+  cleared: 28,
+};
+const DEFAULT_MIN_COLUMN_WIDTH = 40;
+
+export function getMinTransactionTableColumnWidth(
+  id: TransactionTableColumnId,
+): number {
+  return MIN_COLUMN_WIDTHS[id] ?? DEFAULT_MIN_COLUMN_WIDTH;
+}
+
+export function getDefaultTransactionTableColumnWidth(
+  id: TransactionTableColumnId,
+): TransactionTableColumnWidth {
+  return DEFAULT_TRANSACTION_TABLE_COLUMN_WIDTHS[id];
+}
+
+/**
+ * The width each column should render at: the user's dragged width when it has
+ * one, otherwise the column's default. Header cells and row cells both read
+ * this, which is what keeps them aligned.
+ */
+export function resolveTransactionTableColumnWidths(
+  columns: TransactionTableColumn[],
+): Record<TransactionTableColumnId, TransactionTableColumnWidth> {
+  const widths = { ...DEFAULT_TRANSACTION_TABLE_COLUMN_WIDTHS };
+  for (const column of columns) {
+    if (column.width != null) {
+      widths[column.id] = column.width;
+    }
+  }
+  return widths;
+}
 
 // The date column can be reordered but never hidden: it drives keyboard
 // navigation (new transactions start editing on the date field) so it must
@@ -116,7 +175,22 @@ export function parseTransactionTableColumns(
               'hidden' in entry &&
               entry.hidden === true &&
               !isTransactionTableColumnLocked(entry.id);
-            saved.push({ id: entry.id, hidden });
+            const rawWidth =
+              'width' in entry && typeof entry.width === 'number'
+                ? entry.width
+                : undefined;
+            const width =
+              rawWidth != null && Number.isFinite(rawWidth)
+                ? Math.max(
+                    getMinTransactionTableColumnWidth(entry.id),
+                    Math.round(rawWidth),
+                  )
+                : undefined;
+            saved.push({
+              id: entry.id,
+              hidden,
+              ...(width != null && { width }),
+            });
           }
         }
       }
