@@ -141,9 +141,14 @@ is not.
 
 `package.json` only changes at an upstream release, so a fork tracking `master`
 reports the same version for every build in between. The deploy appends the
-commit as semver build metadata, so Settings reads `v26.7.0+<sha>` for both
+commit as semver build metadata, so Settings reads `v<version>+<sha>` for both
 client and server. No configuration is needed — `sync-server.Dockerfile` reads
 `RAILWAY_GIT_COMMIT_SHA` itself.
+
+Railway only provides the git variables when the deploy came from a git trigger.
+A redeploy started from the dashboard, or one triggered by editing a variable,
+builds with an empty SHA and reports a bare version. Push to `deploy` to get a
+stamped build back.
 
 **Do not set `ACTUAL_BUILD_METADATA` to `${{ RAILWAY_GIT_COMMIT_SHA }}`.** It
 resolves to an empty string, which is the whole reason the Dockerfile reads the
