@@ -42,7 +42,7 @@ import { useDateFormat } from '#hooks/useDateFormat';
 import { useFormat } from '#hooks/useFormat';
 import { usePayees } from '#hooks/usePayees';
 import { useTransactionFilters } from '#hooks/useTransactionFilters';
-import { mapField } from '#util/rule';
+import { getDefaultConditionOp, mapField } from '#util/rule';
 
 import { CompactFiltersButton } from './CompactFiltersButton';
 import { FiltersButton } from './FiltersButton';
@@ -646,7 +646,7 @@ export function FilterButton<T extends RuleConditionEntity>({
             fieldsOpen: false,
             condOpen: true,
             field: action.field,
-            op: ops[0],
+            op: getDefaultConditionOp(field, ops[0]),
             value: type === 'boolean' ? true : null,
           };
         }
