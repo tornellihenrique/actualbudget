@@ -59,7 +59,12 @@ import { addNotification } from '#notifications/notificationsSlice';
 import { aqlQuery } from '#queries/aqlQuery';
 import { useDispatch } from '#redux';
 import { disableUndo, enableUndo } from '#undo';
-import { friendlyOp, getAllocationMethods, mapField } from '#util/rule';
+import {
+  friendlyOp,
+  getAllocationMethods,
+  getDefaultConditionOp,
+  mapField,
+} from '#util/rule';
 
 import { FormulaActionEditor } from './FormulaActionEditor';
 
@@ -846,7 +851,7 @@ function ConditionsList({
     copy.splice(index + 1, 0, {
       type: FIELD_TYPES.get(field),
       field,
-      op: 'is',
+      op: getDefaultConditionOp(field, 'is'),
       value: null,
       inputKey: uuidv4(),
     });
@@ -895,7 +900,10 @@ function ConditionsList({
             return newInput(makeValue(cond.value, newCond));
           } else {
             // @ts-expect-error fix this
-            newCond.op = getValidOps(newCond.field)[0];
+            newCond.op = getDefaultConditionOp(
+              newCond.field,
+              getValidOps(newCond.field)[0],
+            );
             return newInput(makeValue(null, newCond));
           }
         } else if (field === 'op') {
