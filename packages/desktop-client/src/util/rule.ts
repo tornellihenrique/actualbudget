@@ -159,3 +159,19 @@ export function translateRuleStage(stage: string): string {
       return '';
   }
 }
+
+// Per-field default ops, overriding the generic one a caller would otherwise
+// pick. Notes are always matched as a substring here, so they open on
+// `contains` rather than `is`.
+const DEFAULT_CONDITION_OPS = { notes: 'contains' };
+
+/**
+ * The op a newly created condition or filter should start on, given the
+ * caller's own default as the fallback.
+ */
+export function getDefaultConditionOp<T extends string>(
+  field: string,
+  fallback: T,
+): T {
+  return (DEFAULT_CONDITION_OPS[field] as T) ?? fallback;
+}
