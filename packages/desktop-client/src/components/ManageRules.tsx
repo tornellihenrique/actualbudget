@@ -254,12 +254,22 @@ export function ManageRules({
       stage: null,
       conditionsOp: 'and',
       conditions: [
-        {
-          field: 'payee',
-          op: 'is',
-          value: payeeId || null,
-          type: 'id',
-        },
+        // A payee-scoped list seeds the rule with that payee. An unscoped one
+        // has nothing to seed, so it starts on the condition most rules are
+        // written against instead of an empty payee.
+        payeeId
+          ? {
+              field: 'payee',
+              op: 'is',
+              value: payeeId,
+              type: 'id',
+            }
+          : {
+              field: 'notes',
+              op: 'contains',
+              value: '',
+              type: 'string',
+            },
       ],
       actions: [
         {
