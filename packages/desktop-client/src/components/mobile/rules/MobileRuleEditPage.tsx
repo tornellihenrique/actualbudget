@@ -75,10 +75,10 @@ export function MobileRuleEditPage() {
     conditionsOp: 'and',
     conditions: [
       {
-        field: 'payee',
-        op: 'is',
+        field: 'notes',
+        op: 'contains',
         value: '',
-        type: 'id',
+        type: 'string',
       },
     ],
     actions: [
