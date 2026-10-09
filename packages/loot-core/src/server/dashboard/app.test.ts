@@ -28,6 +28,7 @@ const ALL_WIDGET_TYPES = allWidgetTypes(
   'monte-carlo-card',
   'bills-card',
   'month-summary-card',
+  'month-figure-card',
 );
 
 describe('isWidgetType', () => {

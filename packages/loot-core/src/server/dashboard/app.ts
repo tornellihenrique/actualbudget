@@ -48,6 +48,7 @@ export function isWidgetType(
     'monte-carlo-card',
     'bills-card',
     'month-summary-card',
+    'month-figure-card',
   ].includes(type);
 }
 

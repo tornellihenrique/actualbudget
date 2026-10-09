@@ -20,6 +20,7 @@ import type {
   DashboardWidgetEntity,
   ExportImportDashboard,
   MarkdownWidget,
+  MonthFigureWidget,
 } from '@actual-app/core/types/models';
 
 import { MOBILE_NAV_HEIGHT } from '#components/mobile/MobileNavTabs';
@@ -66,6 +67,7 @@ import { FormulaCard } from './reports/FormulaCard';
 import { MarkdownCard } from './reports/MarkdownCard';
 import { MissingReportCard } from './reports/MissingReportCard';
 import { MonteCarloCard } from './reports/monte-carlo/MonteCarloCard';
+import { MonthFigureCard } from './reports/month-summary/MonthFigureCard';
 import { MonthSummaryCard } from './reports/month-summary/MonthSummaryCard';
 import { NetWorthCard } from './reports/NetWorthCard';
 import { SankeyCard } from './reports/SankeyCard';
@@ -575,6 +577,13 @@ export function Overview({ dashboard }: OverviewProps) {
                               return;
                             }
 
+                            if (item === 'month-figure-card') {
+                              onAddWidget<MonthFigureWidget>(item, {
+                                metric: 'projected-savings',
+                              });
+                              return;
+                            }
+
                             if (item === 'markdown-card') {
                               onAddWidget<MarkdownWidget>(item, {
                                 content: `### ${t('Text Widget')}\n\n${t('Edit this widget to change the **markdown** content.')}`,
@@ -648,6 +657,10 @@ export function Overview({ dashboard }: OverviewProps) {
                             {
                               name: 'month-summary-card' as const,
                               text: t('Month summary'),
+                            },
+                            {
+                              name: 'month-figure-card' as const,
+                              text: t('Month figure'),
                             },
                             ...(formulaMode
                               ? [
@@ -958,6 +971,15 @@ export function Overview({ dashboard }: OverviewProps) {
                           />
                         ) : widget.type === 'month-summary-card' ? (
                           <MonthSummaryCard
+                            widgetId={item.i}
+                            isEditing={isEditing}
+                            meta={widget.meta}
+                            onMetaChange={newMeta =>
+                              onMetaChange(item, newMeta)
+                            }
+                          />
+                        ) : widget.type === 'month-figure-card' ? (
+                          <MonthFigureCard
                             widgetId={item.i}
                             isEditing={isEditing}
                             meta={widget.meta}

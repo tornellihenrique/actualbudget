@@ -349,7 +349,8 @@ type SpecializedWidget =
   | AgeOfMoneyWidget
   | BalanceForecastWidget
   | BillsWidget
-  | MonthSummaryWidget;
+  | MonthSummaryWidget
+  | MonthFigureWidget;
 export type DashboardWidgetEntity = SpecializedWidget | CustomReportWidget;
 export type NewDashboardWidgetEntity = Omit<
   DashboardWidgetEntity,
@@ -477,5 +478,21 @@ export type MonthSummaryWidget = AbstractWidget<
   'month-summary-card',
   {
     name?: string;
+  } | null
+>;
+
+export type MonthFigureMetric =
+  | 'projected-income'
+  | 'projected-expenses'
+  | 'projected-savings'
+  | 'income-received'
+  | 'spent'
+  | 'saved-so-far';
+
+export type MonthFigureWidget = AbstractWidget<
+  'month-figure-card',
+  {
+    name?: string;
+    metric: MonthFigureMetric;
   } | null
 >;
