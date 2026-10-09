@@ -1,5 +1,6 @@
 import { isRedirectUriAllowed } from './auth/provider';
 import { createLoginThrottle } from './auth/throttle';
+import { monthsBetween } from './tools/budget';
 import { replaceSection } from './tools/notebook';
 import { previousPeriod } from './tools/reports';
 import { amountRange, scheduleStatus, scoreCandidate } from './tools/schedules';
@@ -136,5 +137,20 @@ describe('scoreCandidate', () => {
   it('ignores an unrelated payment that only fits the amount', () => {
     const t = { payee: 'other', notes: 'SUPERMERCADO', amount: -21653 };
     expect(scoreCandidate(t, schedule, 'Receita Federal')).toBeLessThan(3);
+  });
+});
+
+describe('monthsBetween', () => {
+  it('lists every month of an inclusive range across a year boundary', () => {
+    expect(monthsBetween('2026-11', '2027-02')).toEqual([
+      '2026-11',
+      '2026-12',
+      '2027-01',
+      '2027-02',
+    ]);
+  });
+
+  it('rejects a reversed range', () => {
+    expect(() => monthsBetween('2027-02', '2026-11')).toThrow();
   });
 });
