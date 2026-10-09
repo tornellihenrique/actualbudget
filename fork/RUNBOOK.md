@@ -7,7 +7,9 @@ Branch roles, for reference:
 
 - `master` — mirrors upstream, never committed to.
 - `personal` — patches on top of upstream `master`. All work happens here.
-- `deploy` — fast-forwarded from `personal`; Railway builds it via `sync-server.Dockerfile`.
+- `deploy` — fast-forwarded from `personal`; Railway builds it twice: the sync
+  server via `sync-server.Dockerfile` and the MCP connector via
+  `mcp-server.Dockerfile` (§4).
 
 ---
 
@@ -299,3 +301,62 @@ git branch -D pr-<PR-number> try-pr-<PR-number>
 If the PR works and you want it now rather than at the next release, cherry-pick
 it onto `personal` as a patch — and add a `fork/PATCHES.md` row whose drop
 condition is "upstream PR #N ships in a release we've rebased onto."
+
+---
+
+## 4. The MCP connector
+
+`packages/mcp-server` is what lets Claude manage the budget. It runs as a second
+Railway service, `actual-mcp`, built from the same `deploy` commit as the sync
+server so its API always matches the budget's migrations.
+
+### Railway configuration
+
+| Setting                   | Value                                                 | Notes                                                                                              |
+| ------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Source branch             | `deploy`                                              | Same trigger as the sync server.                                                                   |
+| Watch paths               | `packages/{mcp-server,api,loot-core,crdt}/**`, …      | Only changes that affect the connector rebuild it.                                                 |
+| `RAILWAY_DOCKERFILE_PATH` | `mcp-server.Dockerfile`                               |                                                                                                    |
+| Volume mount path         | `/data`                                               | Budget cache, `backups/`, `audit.jsonl`, `auth.json` (OAuth clients and tokens), `daily-job.json`. |
+| Domain                    | `actual-mcp-production-fff5.up.railway.app`           |                                                                                                    |
+| `MCP_PUBLIC_URL`          | `https://actual-mcp-production-fff5.up.railway.app`   | OAuth issuer. Must match the domain or sign-in breaks.                                             |
+| `ACTUAL_SERVER_URL`       | `https://actualbudget-production-c3bf.up.railway.app` |                                                                                                    |
+| `ACTUAL_PASSWORD`         | _secret_, set in the dashboard                        | The sync server password. Also the connector's sign-in password unless `MCP_AUTH_PASSWORD` is set. |
+| `TZ`                      | `America/Sao_Paulo`                                   | "Today" for schedules and the daily job's hour.                                                    |
+| `MCP_DAILY_JOB_HOUR`      | `6`                                                   | Daily backup plus bank sync. See `packages/mcp-server/README.md` for every variable.               |
+| Healthcheck               | `/healthz`                                            |                                                                                                    |
+
+Secrets are typed into the dashboard rather than set by an agent, so they never
+pass through a transcript.
+
+### Connecting clients
+
+- **claude.ai** (then mobile and desktop too): Settings → Connectors → Add
+  custom connector → `https://actual-mcp-production-fff5.up.railway.app/mcp`.
+  Signing in opens the connector's password page.
+- **Claude Code**: run the command below, then `/mcp` to sign in.
+
+  ```bash
+  claude mcp add --transport http actual https://actual-mcp-production-fff5.up.railway.app/mcp
+  ```
+
+Tokens last an hour and refresh for 90 days of inactivity. To sign every client
+out, delete `/data/auth.json` and restart the service.
+
+### Recovering from a bad change
+
+Every change the connector makes is in `/data/audit.jsonl` with its previous
+values, and the budget is exported to `/data/backups/` before the first change
+each day. To roll back wholesale, import a backup zip in Actual (Settings →
+Import) as a new budget and check it before switching over.
+
+### Local development
+
+`yarn typecheck` runs `tsgo -b`, which writes plain `tsc` output over
+`packages/api/dist`. Rebuild the bundle with `yarn workspace @actual-app/api
+build` before running the connector locally, or it fails to start. The Docker
+build never typechecks, so deploys are unaffected.
+
+Test writes against a throwaway sync server rather than production: start
+`packages/sync-server/build/app.js` with a temporary `ACTUAL_DATA_DIR`, bootstrap
+it, import a backup zip with the API, and upload it.
