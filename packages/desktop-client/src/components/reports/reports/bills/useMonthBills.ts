@@ -35,11 +35,8 @@ function useCardBills(accountIds: string[]) {
     queryFn: async () => {
       const entries = await Promise.all(
         accountIds.map(async id => {
-          try {
-            return [id, await send('pluggyai-bills', { id })] as const;
-          } catch {
-            return null;
-          }
+          const result = await send('pluggyai-bills', { id });
+          return Array.isArray(result) ? ([id, result] as const) : null;
         }),
       );
       return new Map<string, CardBill[]>(

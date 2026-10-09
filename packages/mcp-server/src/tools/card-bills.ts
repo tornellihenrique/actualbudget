@@ -66,21 +66,18 @@ export const registerCardBillTools: ToolRegistrar = (server, ctx) => {
         const cards = [];
         const errors = [];
         for (const account of accounts) {
-          try {
-            const bills = await lib.send('pluggyai-bills', { id: account.id });
-            if (bills.length === 0) continue;
-            const { current, next } = selectCardBills(bills, today);
-            cards.push({
-              account: account.name,
-              current: describeCardBill(current),
-              next: describeCardBill(next),
-            });
-          } catch (error) {
-            errors.push({
-              account: account.name,
-              error: error instanceof Error ? error.message : String(error),
-            });
+          const result = await lib.send('pluggyai-bills', { id: account.id });
+          if (!Array.isArray(result)) {
+            errors.push({ account: account.name, error: result.error });
+            continue;
           }
+          if (result.length === 0) continue;
+          const { current, next } = selectCardBills(result, today);
+          cards.push({
+            account: account.name,
+            current: describeCardBill(current),
+            next: describeCardBill(next),
+          });
         }
         return jsonResult({
           today,

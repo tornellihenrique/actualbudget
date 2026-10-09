@@ -31,13 +31,14 @@ export type CreditCardBillsHandlers = {
 /**
  * The card's closed bills (faturas), oldest due date first. Accounts not
  * synced through Pluggy, and Pluggy accounts that aren't credit cards, have
- * none. Throws when the sync server or Pluggy can't be reached.
+ * none. Failures come back as `{ error }` rather than throwing, because a
+ * thrown handler error surfaces in the app as an internal error.
  */
 async function getPluggyAiBills({
   id,
 }: {
   id: AccountEntity['id'];
-}): Promise<CreditCardBill[]> {
+}): Promise<CreditCardBill[] | { error: string }> {
   // DbAccount types account_sync_source without 'pluggyai'.
   const account = await db.first<{
     account_id: string | null;
@@ -52,27 +53,32 @@ async function getPluggyAiBills({
 
   const userToken = await asyncStorage.getItem('user-token');
   if (!userToken) {
-    throw new Error('Not signed in to the sync server.');
+    return { error: 'unauthorized' };
   }
 
   const serverConfig = getServer();
   if (!serverConfig) {
-    throw new Error('Failed to get server config.');
+    return { error: 'no-server' };
   }
 
   const fileId = getPrefs()?.cloudFileId;
-  const data = (await post(
-    serverConfig.PLUGGYAI_SERVER + '/bills',
-    { accountId: account.account_id },
-    {
-      'X-ACTUAL-TOKEN': userToken,
-      ...(fileId ? { 'X-Actual-File-Id': fileId } : {}),
-    },
-    60000,
-  )) as { bills?: PluggyBill[]; error?: string };
+  let data: { bills?: PluggyBill[]; error?: string };
+  try {
+    data = await post(
+      serverConfig.PLUGGYAI_SERVER + '/bills',
+      { accountId: account.account_id },
+      {
+        'X-ACTUAL-TOKEN': userToken,
+        ...(fileId ? { 'X-Actual-File-Id': fileId } : {}),
+      },
+      60000,
+    );
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
 
   if (data.error || !data.bills) {
-    throw new Error(data.error ?? 'Pluggy returned no bills.');
+    return { error: data.error ?? 'no-bills' };
   }
 
   return data.bills.map(bill => ({
