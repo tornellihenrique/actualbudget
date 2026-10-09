@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { ToolRegistrar } from './context';
 import { jsonResult } from './format';
 import { loadLookups } from './lookups';
+import type { Lookups } from './lookups';
 
 const operation = z.discriminatedUnion('op', [
   z.object({
@@ -45,6 +46,20 @@ const operation = z.discriminatedUnion('op', [
       .describe('Category that receives its transactions and budget'),
   }),
 ]);
+
+// The core category update trims `name` unconditionally, so a partial update
+// that leaves it out throws; carry the current name along.
+async function updateCategoryFields(
+  lookups: Lookups,
+  ref: string,
+  fields: Omit<Parameters<typeof api.updateCategory>[1], 'name'>,
+) {
+  const id = lookups.categoryId(ref);
+  await api.updateCategory(id, {
+    ...fields,
+    name: lookups.categoryName(id) ?? id,
+  });
+}
 
 export const registerCategoryTools: ToolRegistrar = (server, ctx) => {
   server.registerTool(
@@ -121,13 +136,13 @@ export const registerCategoryTools: ToolRegistrar = (server, ctx) => {
               );
               break;
             case 'move_category':
-              await api.updateCategory(lookups.categoryId(operation.category), {
+              await updateCategoryFields(lookups, operation.category, {
                 group_id: lookups.groupId(operation.group),
               });
               done.push(`moved ${operation.category} to ${operation.group}`);
               break;
             case 'set_hidden':
-              await api.updateCategory(lookups.categoryId(operation.category), {
+              await updateCategoryFields(lookups, operation.category, {
                 hidden: operation.hidden,
               });
               done.push(
