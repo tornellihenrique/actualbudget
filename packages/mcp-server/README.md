@@ -8,27 +8,27 @@ the budget's schema.
 
 It serves Streamable HTTP at `/mcp` and is its own OAuth 2.1 authorization
 server (dynamic client registration, PKCE, refresh tokens), so it can be added
-as a custom connector in claude.ai, which also makes it available in the Claude
-mobile and desktop apps, or in Claude Code. Signing in asks for a single
-password on a page this server renders.
+as a custom connector in claude.ai (which also makes it available in the Claude
+mobile and desktop apps), in Claude Code, or as a custom MCP app in ChatGPT.
+Signing in asks for a single password on a page this server renders.
 
 ## Configuration
 
-| Variable                    | Required | Description                                                                                                                        |
-| --------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `ACTUAL_SERVER_URL`         | yes      | Sync server URL.                                                                                                                   |
-| `ACTUAL_PASSWORD`           | yes      | Sync server password.                                                                                                              |
-| `ACTUAL_SYNC_ID`            |          | Budget sync ID. Optional when the server holds exactly one budget.                                                                 |
-| `MCP_PUBLIC_URL`            | prod     | Public base URL, used as the OAuth issuer. Defaults to `http://localhost:$PORT`.                                                   |
-| `MCP_AUTH_PASSWORD`         |          | Password for the sign-in page. Defaults to `ACTUAL_PASSWORD`.                                                                      |
-| `MCP_ALLOWED_REDIRECT_URIS` |          | Comma-separated OAuth redirect URIs clients may register. Defaults to the claude.ai and claude.com callbacks; loopback is allowed. |
-| `MCP_DATA_DIR`              |          | Budget cache, backups, audit log and OAuth state. Defaults to `./data`; `/data` in the Docker image.                               |
-| `PORT`                      |          | Defaults to `5007`.                                                                                                                |
-| `MCP_SYNC_TTL_SECONDS`      |          | How long reads reuse the local copy before syncing. Defaults to `30`.                                                              |
-| `MCP_DAILY_JOB`             |          | Daily backup plus bank sync. Defaults to `true`.                                                                                   |
-| `MCP_DAILY_JOB_HOUR`        |          | Local hour it runs at (set `TZ`). Defaults to `6`.                                                                                 |
-| `MCP_DAILY_BANK_SYNC`       |          | Include bank sync in the daily job. Defaults to `true`.                                                                            |
-| `MCP_BACKUP_RETENTION`      |          | Backups kept. Defaults to `14`.                                                                                                    |
+| Variable                    | Required | Description                                                                                                                                                                           |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ACTUAL_SERVER_URL`         | yes      | Sync server URL.                                                                                                                                                                      |
+| `ACTUAL_PASSWORD`           | yes      | Sync server password.                                                                                                                                                                 |
+| `ACTUAL_SYNC_ID`            |          | Budget sync ID. Optional when the server holds exactly one budget.                                                                                                                    |
+| `MCP_PUBLIC_URL`            | prod     | Public base URL, used as the OAuth issuer. Defaults to `http://localhost:$PORT`.                                                                                                      |
+| `MCP_AUTH_PASSWORD`         |          | Password for the sign-in page. Defaults to `ACTUAL_PASSWORD`.                                                                                                                         |
+| `MCP_ALLOWED_REDIRECT_URIS` |          | Comma-separated OAuth redirect URIs clients may register; an entry ending in `/*` matches that path prefix. Defaults to the Claude and ChatGPT callbacks; loopback is always allowed. |
+| `MCP_DATA_DIR`              |          | Budget cache, backups, audit log and OAuth state. Defaults to `./data`; `/data` in the Docker image.                                                                                  |
+| `PORT`                      |          | Defaults to `5007`.                                                                                                                                                                   |
+| `MCP_SYNC_TTL_SECONDS`      |          | How long reads reuse the local copy before syncing. Defaults to `30`.                                                                                                                 |
+| `MCP_DAILY_JOB`             |          | Daily backup plus bank sync. Defaults to `true`.                                                                                                                                      |
+| `MCP_DAILY_JOB_HOUR`        |          | Local hour it runs at (set `TZ`). Defaults to `6`.                                                                                                                                    |
+| `MCP_DAILY_BANK_SYNC`       |          | Include bank sync in the daily job. Defaults to `true`.                                                                                                                               |
+| `MCP_BACKUP_RETENTION`      |          | Backups kept. Defaults to `14`.                                                                                                                                                       |
 
 ## Safety
 

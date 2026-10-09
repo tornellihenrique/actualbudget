@@ -78,6 +78,24 @@ describe('isRedirectUriAllowed', () => {
     ).toBe(true);
   });
 
+  it('matches entries ending in /* as a path prefix', () => {
+    const chatgpt = ['https://chatgpt.com/connector/oauth/*'];
+    expect(
+      isRedirectUriAllowed(
+        'https://chatgpt.com/connector/oauth/abc123',
+        chatgpt,
+      ),
+    ).toBe(true);
+    expect(
+      isRedirectUriAllowed('https://chatgpt.com/other/abc123', chatgpt),
+    ).toBe(false);
+    expect(
+      isRedirectUriAllowed('https://chatgpt.com.evil.example/x', [
+        'https://chatgpt.com*',
+      ]),
+    ).toBe(false);
+  });
+
   it('rejects other hosts', () => {
     expect(
       isRedirectUriAllowed('https://claude.ai.evil.example/cb', allowed),

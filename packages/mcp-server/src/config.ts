@@ -25,6 +25,9 @@ export type ServerConfig = {
 const DEFAULT_REDIRECT_URIS = [
   'https://claude.ai/api/mcp/auth_callback',
   'https://claude.com/api/mcp/auth_callback',
+  'https://chatgpt.com/connector_platform_oauth_redirect',
+  // ChatGPT uses a per-connection callback when the server lacks RFC 9207.
+  'https://chatgpt.com/connector/oauth/*',
 ];
 
 function required(env: NodeJS.ProcessEnv, name: string): string {

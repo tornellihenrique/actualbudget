@@ -50,8 +50,15 @@ function sha256(value: string) {
   return createHash('sha256').update(value).digest();
 }
 
+/**
+ * Entries match exactly, except ones ending in `/*`, which match any URI under
+ * that path. Requiring the slash keeps a prefix from spilling into other hosts.
+ */
 export function isRedirectUriAllowed(uri: string, allowed: string[]) {
-  if (allowed.includes(uri)) return true;
+  const listed = allowed.some(entry =>
+    entry.endsWith('/*') ? uri.startsWith(entry.slice(0, -1)) : entry === uri,
+  );
+  if (listed) return true;
   try {
     const url = new URL(uri);
     return url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname);
