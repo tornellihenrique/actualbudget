@@ -82,6 +82,18 @@ the explicit unknown bucket) are explained in the notebook.
   neighbouring occurrences; an unpaid occurrence before `next_date` counts as
   skipped and is hidden. Statuses reuse `getStatus` from
   `loot-core/src/shared/schedules.ts`, so they agree with the Schedules page.
+- A schedule whose payee is a transfer to a Pluggy-synced credit card (a card
+  bill) uses the card's closed bill (fatura) from Pluggy instead of the
+  estimate: the bill due this month, otherwise the next unpaid one, shown with
+  its due date. Pluggy only lists a bill once the card closes it; until then,
+  or offline, the card falls back to the estimate. The connector's
+  `get_card_bills` reads the same bills.
+- `month-figure-card` shows one headline number (projected income, expenses or
+  savings, or income received, spent or saved so far), picked from the card's
+  context menu. It shares `monthSummary.ts` with the month summary, so
+  "projected savings" matches the summary's "Projected for month end".
+  Overspending leaves out rollover categories (A receber), as the budget page
+  does.
 
 ## Working split
 
