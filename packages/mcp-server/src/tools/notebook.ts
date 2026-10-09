@@ -16,7 +16,13 @@ export function replaceSection(
   const lines = notebook.split('\n');
   const title = `## ${heading.replace(/^#+\s*/, '').trim()}`;
   const start = lines.findIndex(l => l.trim() === title);
-  const section = `${title}\n\n${content.trim()}\n`;
+  const contentLines = content.trim().split('\n');
+  const body = (
+    contentLines[0].trim() === title ? contentLines.slice(1) : contentLines
+  )
+    .join('\n')
+    .trim();
+  const section = `${title}\n\n${body}\n`;
   if (start === -1) return `${notebook.trimEnd()}\n\n${section}`.trimStart();
   const rest = lines.slice(start + 1);
   const offset = rest.findIndex(l => /^##?\s/.test(l));

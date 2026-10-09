@@ -55,6 +55,12 @@ describe('replaceSection', () => {
     expect(result).toContain('## People\n\nKaroliny');
   });
 
+  it('does not repeat the heading when the content starts with it', () => {
+    const result = replaceSection(notebook, 'Rules', '## Rules\n\nnew');
+    expect(result.match(/## Rules/g)).toHaveLength(1);
+    expect(result).toContain('## Rules\n\nnew\n');
+  });
+
   it('appends a missing section', () => {
     expect(replaceSection(notebook, 'Taxes', 'DAS')).toMatch(
       /## People\n\nKaroliny\n\n## Taxes\n\nDAS\n$/,
