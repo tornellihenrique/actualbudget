@@ -52,9 +52,6 @@ Não faço ideia` as the explicit unknown bucket) are explained in the notebook.
 
 ## Known issues
 
-- The server password is very short and the sync server is public. Change it to
-  a strong one (Settings → Change server password), then update
-  `ACTUAL_PASSWORD` on the `actual-mcp` service.
 - `api/transaction-update` does not await its write (`loot-core/src/server/api.ts`).
   The connector works around it, and the one-line fix is worth sending upstream.
 
