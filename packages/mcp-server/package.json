@@ -1,0 +1,33 @@
+{
+  "name": "@actual-app/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server that lets AI assistants read and manage an Actual budget",
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "vite build",
+    "start": "node dist/index.js",
+    "test": "vitest --run",
+    "typecheck": "tsgo -b"
+  },
+  "dependencies": {
+    "@actual-app/api": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.1",
+    "express": "^5.2.1",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.1",
+    "@typescript/native-preview": "beta",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
