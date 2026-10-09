@@ -108,6 +108,20 @@ export const pluggyaiService = {
     }
   },
 
+  getCreditCardBillsByAccountId: async (accountId, fileId) => {
+    try {
+      const client = getPluggyClient(fileId);
+      const { results } = await client.fetchCreditCardBills(accountId, {
+        pageSize: 100,
+      });
+      return results;
+    } catch (error) {
+      console.error('Error fetching credit card bills');
+      debugSensitive('Error fetching credit card bills: %O', error);
+      throw error;
+    }
+  },
+
   getTransactionsByAccountId: async (accountId, startDate, fileId) => {
     try {
       const client = getPluggyClient(fileId);

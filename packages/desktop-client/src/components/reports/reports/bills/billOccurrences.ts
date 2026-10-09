@@ -7,6 +7,8 @@ import {
 } from '@actual-app/core/shared/schedules';
 import type { ScheduleStatusType } from '@actual-app/core/shared/schedules';
 import type {
+  AccountEntity,
+  PayeeEntity,
   ScheduleEntity,
   TransactionEntity,
 } from '@actual-app/core/types/models';
@@ -21,6 +23,7 @@ export type BillSchedule = Pick<
   | 'completed'
   | 'custom_upcoming_length'
   | '_account'
+  | '_payee'
   | '_amount'
   | '_amountOp'
   | '_date'
@@ -37,10 +40,19 @@ export type BillOccurrence = {
   scheduleId: string;
   name: string;
   date: string;
+  /** Due date of the card bill this occurrence pays, when it pays one. */
+  billDueDate?: string;
   amount: number;
   isIncome: boolean;
   isEstimate: boolean;
   status: BillStatus;
+};
+
+/** A closed credit card bill (fatura), amounts in cents. */
+export type CardBill = {
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
 };
 
 export type BillTotals = {
@@ -156,16 +168,74 @@ function estimateAmount(
   return { amount: Math.round(total / recent.length), isEstimate: true };
 }
 
+/**
+ * Schedules whose payee is a transfer to a credit card synced through Pluggy,
+ * mapped to that card's account id.
+ */
+export function getCardAccountsBySchedule(
+  schedules: readonly Pick<BillSchedule, 'id' | '_payee'>[],
+  payees: readonly Pick<PayeeEntity, 'id' | 'transfer_acct'>[],
+  accounts: readonly Pick<
+    AccountEntity,
+    'id' | 'closed' | 'account_sync_source'
+  >[],
+): Map<string, string> {
+  const pluggyAccounts = new Set(
+    accounts
+      .filter(
+        account =>
+          !account.closed && account.account_sync_source === 'pluggyai',
+      )
+      .map(account => account.id),
+  );
+  const transferAccounts = new Map(
+    payees.map(payee => [payee.id, payee.transfer_acct]),
+  );
+
+  const result = new Map<string, string>();
+  for (const schedule of schedules) {
+    const account = schedule._payee
+      ? transferAccounts.get(schedule._payee)
+      : undefined;
+    if (account && pluggyAccounts.has(account)) {
+      result.set(schedule.id, account);
+    }
+  }
+  return result;
+}
+
+/**
+ * The bill a payment this month settles: the one due this month, otherwise
+ * the next one still unpaid. Bills are expected oldest due date first.
+ */
+export function pickCardBill(
+  bills: readonly CardBill[],
+  month: string,
+): CardBill | undefined {
+  const monthStart = monthUtils.firstDayOfMonth(month);
+  const monthEnd = monthUtils.lastDayOfMonth(month);
+  return (
+    bills.find(
+      bill => bill.dueDate >= monthStart && bill.dueDate <= monthEnd,
+    ) ??
+    bills.find(
+      bill => bill.dueDate >= monthStart && bill.paidAmount < bill.totalAmount,
+    )
+  );
+}
+
 function getScheduleOccurrences({
   schedule,
   transactions,
   month,
   upcomingLength,
+  cardBills,
 }: {
   schedule: BillSchedule;
   transactions: BillTransaction[];
   month: string;
   upcomingLength: string;
+  cardBills?: readonly CardBill[];
 }): BillOccurrence[] {
   const monthStart = monthUtils.firstDayOfMonth(month);
   const monthEnd = monthUtils.lastDayOfMonth(month);
@@ -206,7 +276,14 @@ function getScheduleOccurrences({
       return [];
     }
 
-    const expected = estimateAmount(schedule, ownTransactions, window.start);
+    const estimate = estimateAmount(schedule, ownTransactions, window.start);
+    const bill = cardBills ? pickCardBill(cardBills, month) : undefined;
+    const expected = bill
+      ? {
+          amount: (Math.sign(estimate.amount) || -1) * bill.totalAmount,
+          isEstimate: false,
+        }
+      : estimate;
     const amount = isPaid
       ? matched.reduce((sum, transaction) => sum + transaction.amount, 0)
       : expected.amount;
@@ -217,6 +294,7 @@ function getScheduleOccurrences({
         scheduleId: schedule.id,
         name: schedule.name ?? '',
         date,
+        ...(bill ? { billDueDate: bill.dueDate } : {}),
         amount,
         isIncome: expected.amount > 0,
         isEstimate: !isPaid && expected.isEstimate,
@@ -231,11 +309,14 @@ export function getMonthBillOccurrences({
   transactions,
   month,
   upcomingLength,
+  cardBillsBySchedule,
 }: {
   schedules: readonly BillSchedule[];
   transactions: readonly BillTransaction[];
   month: string;
   upcomingLength: string;
+  /** Card bills for schedules that pay a credit card, keyed by schedule id. */
+  cardBillsBySchedule?: ReadonlyMap<string, readonly CardBill[]>;
 }): BillOccurrence[] {
   const transactionsBySchedule = new Map<string, BillTransaction[]>();
   for (const transaction of transactions) {
@@ -254,6 +335,7 @@ export function getMonthBillOccurrences({
         transactions: transactionsBySchedule.get(schedule.id) ?? [],
         month,
         upcomingLength,
+        cardBills: cardBillsBySchedule?.get(schedule.id),
       }),
     )
     .sort(

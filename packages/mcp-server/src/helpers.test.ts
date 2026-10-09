@@ -1,11 +1,17 @@
 import { isRedirectUriAllowed } from './auth/provider';
 import { createLoginThrottle } from './auth/throttle';
 import { monthsBetween } from './tools/budget';
+import { describeCardBill, selectCardBills } from './tools/card-bills';
 import { replaceSection } from './tools/notebook';
 import { previousPeriod } from './tools/reports';
 import { amountRange, scheduleStatus, scoreCandidate } from './tools/schedules';
 
-vi.mock('@actual-app/api', () => ({}));
+vi.mock('@actual-app/api', () => ({
+  utils: {
+    integerToAmount: (cents: number) => cents / 100,
+    amountToInteger: (amount: number) => Math.round(amount * 100),
+  },
+}));
 
 describe('scheduleStatus', () => {
   const today = '2026-10-09';
@@ -176,5 +182,49 @@ describe('monthsBetween', () => {
 
   it('rejects a reversed range', () => {
     expect(() => monthsBetween('2027-02', '2026-11')).toThrow();
+  });
+});
+
+describe('selectCardBills', () => {
+  const bills = [
+    {
+      id: 'sep',
+      dueDate: '2026-09-13',
+      totalAmount: 225620,
+      minimumPaymentAmount: 33843,
+      paidAmount: 225620,
+    },
+    {
+      id: 'oct',
+      dueDate: '2026-10-13',
+      totalAmount: 249448,
+      minimumPaymentAmount: 37417,
+      paidAmount: 0,
+    },
+  ];
+
+  it('takes the bill due this month as current', () => {
+    const { current, next } = selectCardBills(bills, '2026-10-09');
+    expect(current?.id).toBe('oct');
+    expect(next).toBeUndefined();
+  });
+
+  it('falls back to the next unpaid bill and the one after it', () => {
+    const { current, next } = selectCardBills(bills, '2026-08-20');
+    expect(current?.id).toBe('oct');
+    expect(next).toBeUndefined();
+    expect(selectCardBills(bills.slice(0, 1), '2026-10-09').current).toBe(
+      undefined,
+    );
+  });
+
+  it('reports what is left to pay', () => {
+    expect(describeCardBill({ ...bills[1], paidAmount: 100000 })).toEqual({
+      due_date: '2026-10-13',
+      total: 2494.48,
+      minimum: 374.17,
+      paid: 1000,
+      remaining: 1494.48,
+    });
   });
 });

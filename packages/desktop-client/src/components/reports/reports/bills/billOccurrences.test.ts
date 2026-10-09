@@ -3,10 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getBillTotals,
+  getCardAccountsBySchedule,
   getMonthBillOccurrences,
   getOccurrenceDates,
+  pickCardBill,
 } from './billOccurrences';
-import type { BillSchedule, BillTransaction } from './billOccurrences';
+import type {
+  BillSchedule,
+  BillTransaction,
+  CardBill,
+} from './billOccurrences';
 
 const CHECKING = 'checking';
 const CARD = 'card';
@@ -47,6 +53,7 @@ function makeSchedule({
     completed,
     custom_upcoming_length: null,
     _account: account,
+    _payee: `${id}-payee`,
     _amount: amount,
     _amountOp: amountOp,
     _date: recur,
@@ -235,6 +242,95 @@ describe('getMonthBillOccurrences', () => {
     });
 
     expect(occurrences.map(({ name }) => name)).toEqual(['Open', 'Paid']);
+  });
+});
+
+describe('getCardAccountsBySchedule', () => {
+  it('finds schedules that pay a Pluggy-synced card by transfer', () => {
+    const result = getCardAccountsBySchedule(
+      [
+        makeSchedule({ id: 'itau' }),
+        makeSchedule({ id: 'manual' }),
+        makeSchedule({ id: 'rent' }),
+      ],
+      [
+        { id: 'itau-payee', transfer_acct: CARD },
+        { id: 'manual-payee', transfer_acct: 'manual-card' },
+        { id: 'rent-payee' },
+      ],
+      [
+        { id: CARD, closed: 0, account_sync_source: 'pluggyai' },
+        { id: 'manual-card', closed: 0, account_sync_source: null },
+      ],
+    );
+
+    expect([...result]).toEqual([['itau', CARD]]);
+  });
+});
+
+describe('pickCardBill', () => {
+  const bills: CardBill[] = [
+    { dueDate: '2016-11-13', totalAmount: 210000, paidAmount: 210000 },
+    { dueDate: '2016-12-13', totalAmount: 249448, paidAmount: 0 },
+  ];
+
+  it('picks the bill due in the month', () => {
+    expect(pickCardBill(bills, '2016-12')?.totalAmount).toBe(249448);
+  });
+
+  it('falls back to the next unpaid bill', () => {
+    expect(pickCardBill(bills.slice(1), '2016-11')?.dueDate).toBe('2016-12-13');
+    expect(pickCardBill(bills.slice(0, 1), '2016-12')).toBeUndefined();
+  });
+});
+
+describe('getMonthBillOccurrences with card bills', () => {
+  const schedule = makeSchedule({
+    id: 'itau',
+    name: 'Itaú card',
+    start: '2016-01-12',
+    nextDate: '2016-12-12',
+    amount: { num1: -800000, num2: -50000 },
+    amountOp: 'isbetween',
+  });
+  const transactions = [
+    makeTransaction('itau', '2016-10-12', -300000),
+    makeTransaction('itau', '2016-11-12', -100000),
+  ];
+
+  it('expects the bill total instead of an estimate and shows its due date', () => {
+    const [occurrence] = getMonthBillOccurrences({
+      schedules: [schedule],
+      transactions,
+      month: '2016-12',
+      upcomingLength: '7',
+      cardBillsBySchedule: new Map([
+        [
+          'itau',
+          [{ dueDate: '2016-12-13', totalAmount: 249448, paidAmount: 0 }],
+        ],
+      ]),
+    });
+
+    expect(occurrence).toMatchObject({
+      date: '2016-12-12',
+      billDueDate: '2016-12-13',
+      amount: -249448,
+      isEstimate: false,
+    });
+  });
+
+  it('keeps the estimate when no bill is known', () => {
+    const [occurrence] = getMonthBillOccurrences({
+      schedules: [schedule],
+      transactions,
+      month: '2016-12',
+      upcomingLength: '7',
+      cardBillsBySchedule: new Map([['itau', []]]),
+    });
+
+    expect(occurrence).toMatchObject({ amount: -200000, isEstimate: true });
+    expect(occurrence.billDueDate).toBeUndefined();
   });
 });
 

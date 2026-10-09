@@ -275,6 +275,75 @@ app.post(
   }),
 );
 
+app.post(
+  '/bills',
+  handleError(async (req, res) => {
+    const { accountId } = req.body || {};
+    const fileId = req.get('X-Actual-File-Id');
+    if (!!fileId) {
+      if (!isValidFileId(fileId)) {
+        res.status(400).send({
+          status: 'error',
+          reason: 'invalid-file-id',
+          details: 'invalid fileId',
+        });
+        return;
+      }
+
+      if (!canAccessFile(fileId, res.locals.user_id)) {
+        res.status(403).send({
+          status: 'error',
+          reason: 'file-access-denied',
+          details: "You don't have permissions over this file",
+        });
+        return;
+      }
+    }
+
+    try {
+      const source = pluggyaiService.getCredentialSource(fileId);
+      if (!source) {
+        res.status(400).send({
+          status: 'error',
+          reason: 'not-configured',
+          details: 'Pluggy credentials are not configured',
+        });
+        return;
+      }
+
+      const account = await pluggyaiService.getAccountById(accountId, fileId);
+      if (account.type !== 'CREDIT') {
+        res.send({ status: 'ok', data: { bills: [] } });
+        return;
+      }
+
+      const bills = (
+        await pluggyaiService.getCreditCardBillsByAccountId(accountId, fileId)
+      )
+        .map(bill => ({
+          id: bill.id,
+          dueDate: getDate(new Date(bill.dueDate)),
+          totalAmount: bill.totalAmount,
+          minimumPaymentAmount: bill.minimumPaymentAmount ?? null,
+          paidAmount: (bill.payments ?? []).reduce(
+            (sum, payment) => sum + payment.amount,
+            0,
+          ),
+        }))
+        .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+      res.send({ status: 'ok', data: { bills } });
+    } catch (error) {
+      res.send({
+        status: 'ok',
+        data: {
+          error: error.message,
+        },
+      });
+    }
+  }),
+);
+
 function getDate(date) {
   return date.toISOString().split('T')[0];
 }

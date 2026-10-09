@@ -95,7 +95,11 @@ function BillRow({ occurrence }: BillRowProps) {
         {occurrence.name}
       </Text>
       <Text style={{ ...styles.smallText, color: theme.pageTextSubdued }}>
-        {monthUtils.format(occurrence.date, 'd MMM', locale)}
+        {monthUtils.format(
+          occurrence.billDueDate ?? occurrence.date,
+          'd MMM',
+          locale,
+        )}
       </Text>
       <Block
         style={{
