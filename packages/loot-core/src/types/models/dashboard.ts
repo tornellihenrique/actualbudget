@@ -347,7 +347,9 @@ type SpecializedWidget =
   | FormulaWidget
   | SankeyWidget
   | AgeOfMoneyWidget
-  | BalanceForecastWidget;
+  | BalanceForecastWidget
+  | BillsWidget
+  | MonthSummaryWidget;
 export type DashboardWidgetEntity = SpecializedWidget | CustomReportWidget;
 export type NewDashboardWidgetEntity = Omit<
   DashboardWidgetEntity,
@@ -461,5 +463,19 @@ export type BalanceForecastWidget = AbstractWidget<
     timeFrame?: TimeFrame;
     granularity?: 'Daily' | 'Monthly';
     source?: ForecastSource;
+  } | null
+>;
+
+export type BillsWidget = AbstractWidget<
+  'bills-card',
+  {
+    name?: string;
+  } | null
+>;
+
+export type MonthSummaryWidget = AbstractWidget<
+  'month-summary-card',
+  {
+    name?: string;
   } | null
 >;

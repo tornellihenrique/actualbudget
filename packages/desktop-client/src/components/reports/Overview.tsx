@@ -56,6 +56,7 @@ import { DashboardSelector } from './DashboardSelector';
 import { LoadingIndicator } from './LoadingIndicator';
 import { AgeOfMoneyCard } from './reports/AgeOfMoneyCard';
 import { BalanceForecastCard } from './reports/BalanceForecastCard';
+import { BillsCard } from './reports/bills/BillsCard';
 import { BudgetAnalysisCard } from './reports/BudgetAnalysisCard';
 import { CalendarCard } from './reports/CalendarCard';
 import { CashFlowCard } from './reports/CashFlowCard';
@@ -65,6 +66,7 @@ import { FormulaCard } from './reports/FormulaCard';
 import { MarkdownCard } from './reports/MarkdownCard';
 import { MissingReportCard } from './reports/MissingReportCard';
 import { MonteCarloCard } from './reports/monte-carlo/MonteCarloCard';
+import { MonthSummaryCard } from './reports/month-summary/MonthSummaryCard';
 import { NetWorthCard } from './reports/NetWorthCard';
 import { SankeyCard } from './reports/SankeyCard';
 import { SpendingCard } from './reports/SpendingCard';
@@ -298,7 +300,12 @@ export function Overview({ dashboard }: OverviewProps) {
       widget: {
         type,
         width: 4,
-        height: type === 'sankey-card' ? 3 : 2,
+        height:
+          type === 'sankey-card' ||
+          type === 'bills-card' ||
+          type === 'month-summary-card'
+            ? 3
+            : 2,
         meta,
         dashboard_page_id: dashboard.id,
       },
@@ -634,6 +641,14 @@ export function Overview({ dashboard }: OverviewProps) {
                               name: 'calendar-card' as const,
                               text: t('Calendar card'),
                             },
+                            {
+                              name: 'bills-card' as const,
+                              text: t('Bills this month'),
+                            },
+                            {
+                              name: 'month-summary-card' as const,
+                              text: t('Month summary'),
+                            },
                             ...(formulaMode
                               ? [
                                   {
@@ -925,6 +940,24 @@ export function Overview({ dashboard }: OverviewProps) {
                         ) : widget.type === 'monte-carlo-card' &&
                           monteCarloReportEnabled ? (
                           <MonteCarloCard
+                            widgetId={item.i}
+                            isEditing={isEditing}
+                            meta={widget.meta}
+                            onMetaChange={newMeta =>
+                              onMetaChange(item, newMeta)
+                            }
+                          />
+                        ) : widget.type === 'bills-card' ? (
+                          <BillsCard
+                            widgetId={item.i}
+                            isEditing={isEditing}
+                            meta={widget.meta}
+                            onMetaChange={newMeta =>
+                              onMetaChange(item, newMeta)
+                            }
+                          />
+                        ) : widget.type === 'month-summary-card' ? (
+                          <MonthSummaryCard
                             widgetId={item.i}
                             isEditing={isEditing}
                             meta={widget.meta}

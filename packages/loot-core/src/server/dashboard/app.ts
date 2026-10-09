@@ -46,6 +46,8 @@ export function isWidgetType(
     'balance-forecast-card',
     'age-of-money-card',
     'monte-carlo-card',
+    'bills-card',
+    'month-summary-card',
   ].includes(type);
 }
 
